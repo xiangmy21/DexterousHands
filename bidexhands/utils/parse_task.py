@@ -25,6 +25,7 @@ from bidexhands.tasks.shadow_hand_pen import ShadowHandPen
 from bidexhands.tasks.shadow_hand_re_orientation import ShadowHandReOrientation
 from bidexhands.tasks.shadow_hand_kettle import ShadowHandKettle
 from bidexhands.tasks.shadow_hand_block_stack import ShadowHandBlockStack
+from bidexhands.tasks.shadow_hand_throw_in_cup import ShadowHandThrowInCup
 
 # Allegro hand
 from bidexhands.tasks.allegro_hand_over import AllegroHandOver

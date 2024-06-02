@@ -26,13 +26,13 @@
 		<visual name="base_body-2">
 			<origin xyz="0 0 0"/>
 			<geometry>
-				<mesh filename="textured_objs/original-1.obj" scale="0.1 0.1 0.1"/>
+				<mesh filename="textured_objs/original-1.obj" scale="0.13 0.13 0.13"/>
 			</geometry>
 		</visual>
 		<collision>
 			<origin xyz="0 0 0"/>
 			<geometry>
-				<mesh filename="textured_objs/original-1.obj" scale="0.1 0.1 0.1"/>
+				<mesh filename="textured_objs/original-1.obj" scale="0.13 0.13 0.13"/>
 			</geometry>
 		</collision>
 	</link>
