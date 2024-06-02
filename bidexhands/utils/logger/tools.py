@@ -80,7 +80,7 @@ def convert_tfevents_to_csv(root_dir, alg_type, env_num, env_step, refresh=False
             print("ea.scalars.Keys(): ", ea.scalars.Keys())
             
             if alg_type == "sarl":
-                for i, test_rew in enumerate(ea.scalars.Items("Train/mean_reward")):
+                for i, test_rew in enumerate(ea.scalars.Items("Loss/value_function")):
                     content.append(
                         [
                             test_rew.step * env_step * env_num,   # if env is to lift a pot, change it as test_rew.step * 20 * 2048

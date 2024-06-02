@@ -1381,7 +1381,7 @@ def compute_hand_reward(
     left_hand_dist = torch.norm(block_left_handle_pos - left_hand_pos, p=2, dim=-1)
 
     right_dist_rew = torch.exp(-10 * right_hand_dist)
-    left_dist_rew = torch.clamp(torch.exp(left_hand_dist), 0, 1.8)
+    left_dist_rew = torch.clamp(torch.exp(0.1*left_hand_dist), 0, 0.3)
     # right_hand_finger_dist = (torch.norm(block_right_handle_pos - right_hand_ff_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - right_hand_mf_pos, p=2, dim=-1)
     #                         + torch.norm(block_right_handle_pos - right_hand_rf_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - right_hand_lf_pos, p=2, dim=-1) 
     #                         + torch.norm(block_right_handle_pos - right_hand_th_pos, p=2, dim=-1))
@@ -1397,7 +1397,7 @@ def compute_hand_reward(
 
     # rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale
 
-    action_penalty = -0.05*torch.sum(actions ** 2, dim=-1)
+    action_penalty = -0.02*torch.sum(actions ** 2, dim=-1)
 
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     # reward = torch.exp(-0.05*(up_rew * dist_reward_scale)) + torch.exp(-0.05*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.05*(left_hand_dist_rew * dist_reward_scale))
@@ -1405,17 +1405,17 @@ def compute_hand_reward(
     # up_rew = torch.where(right_hand_finger_dist < 0.6,
     #                 torch.where(left_hand_finger_dist < 0.4,
     object_dist = torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)
-    near_rew = torch.exp(-0.5*object_dist)*5
+    near_rew = torch.exp(-0.5*object_dist)*7
     
     # rot_dist = calculate_angle_between_z_axes(block_right_handle_rot)
     # rot_rew = 1.0/(torch.abs(rot_dist) + 0.03) * 0.2
-    rot_dist = action_penalty
+    # rot_dist = action_penalty
     rot_rew = torch.abs(action_penalty)*0
 
     left_right_height_diff = block_left_handle_pos[:, 2] - block_right_handle_pos[:, 2]
     left_right_height_rew = torch.where(
         left_right_height_diff >= 0,
-        torch.clamp(torch.exp(left_right_height_diff), 0, 2),
+        torch.clamp(torch.exp(left_right_height_diff*0.5), 0, 0.3),
         -torch.exp(-left_right_height_diff)
     )
     left_right_height_rew = torch.where(
@@ -1436,10 +1436,10 @@ def compute_hand_reward(
     successes = torch.where(successes == 0, 
                     torch.where(object_dist < 0.05, torch.ones_like(successes), successes), successes)
     
-    reward = reward - fall_flag1.float() * 5 - fall_flag2.float() * 20 + successes * 20
+    reward = reward - fall_flag1.float() * 3 - fall_flag2.float() * 20 + successes * 10
 
     resets = torch.where(fall_flag1 | fall_flag2, torch.ones_like(reset_buf), reset_buf)
-    resets = torch.where((progress_buf >= max_episode_length) | (object_dist < 0.02), torch.ones_like(resets), resets)
+    resets = torch.where((progress_buf >= max_episode_length), torch.ones_like(resets), resets)
 
     num_resets = torch.sum(resets)
     finished_cons_successes = torch.sum(successes * resets.float())
