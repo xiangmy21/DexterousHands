@@ -1397,7 +1397,7 @@ def compute_hand_reward(
 
     # rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale
 
-    action_penalty = -0.02*torch.sum(actions ** 2, dim=-1)
+    action_penalty = -0.001*torch.sum(actions ** 2, dim=-1)
 
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     # reward = torch.exp(-0.05*(up_rew * dist_reward_scale)) + torch.exp(-0.05*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.05*(left_hand_dist_rew * dist_reward_scale))
@@ -1405,7 +1405,7 @@ def compute_hand_reward(
     # up_rew = torch.where(right_hand_finger_dist < 0.6,
     #                 torch.where(left_hand_finger_dist < 0.4,
     object_dist = torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)
-    near_rew = torch.exp(-0.5*object_dist)*7
+    near_rew = torch.exp(-0.5*object_dist)*10
     
     # rot_dist = calculate_angle_between_z_axes(block_right_handle_rot)
     # rot_rew = 1.0/(torch.abs(rot_dist) + 0.03) * 0.2
@@ -1436,7 +1436,7 @@ def compute_hand_reward(
     successes = torch.where(successes == 0, 
                     torch.where(object_dist < 0.05, torch.ones_like(successes), successes), successes)
     
-    reward = reward - fall_flag1.float() * 3 - fall_flag2.float() * 20 + successes * 10
+    reward = reward - fall_flag1.float() * 3 - fall_flag2.float() * 20 + successes * 500
 
     resets = torch.where(fall_flag1 | fall_flag2, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where((progress_buf >= max_episode_length), torch.ones_like(resets), resets)
