@@ -1,3 +1,5 @@
+主要的修改为添加了 [ShadowHandThrowInCup.yaml](./bidexhands/cfg/ShadowHandThrowInCup.yaml) 和 [shadow_hand_throw_in_cup.py](./bidexhands/tasks/shadow_hand_throw_in_cup.py) 作为一个新任务：将左手的方块放入右手的杯中。
+
 # Bi-DexHands: Bimanual Dexterous Manipulation via Reinforcement Learning
 <img src="assets/image_folder/coverv3.jpg" width="1000" border="1"/>
 
