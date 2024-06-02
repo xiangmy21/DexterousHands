@@ -49,7 +49,7 @@ def convert_tfevents_to_csv(root_dir, alg_type, env_num, env_step, refresh=False
     :param bool refresh: re-create csv file under any condition.
     """
     if alg_type == 'sarl':
-        tfevent_files = find_all_files(root_dir, re.compile(r"^.*tfevents.*$"))
+        tfevent_files = find_all_files(root_dir, re.compile(r"^.*tfevents.*.0$"))
     elif alg_type == 'marl':
         tfevent_files = find_all_files(root_dir, re.compile(r"^.*tfevents.*.13$"))
     else:
@@ -77,6 +77,7 @@ def convert_tfevents_to_csv(root_dir, alg_type, env_num, env_step, refresh=False
             initial_time = ea._first_event_timestamp
             content = [["env_step", "rew", "time"]]
 
+            print("ea.scalars.Keys(): ", ea.scalars.Keys())
             
             if alg_type == "sarl":
                 for i, test_rew in enumerate(ea.scalars.Items("Train/mean_reward")):
