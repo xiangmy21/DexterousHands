@@ -1133,7 +1133,7 @@ class ShadowHandThrowInCup(BaseTask):
             self.apply_torque[:, 1, :] = self.actions[:, 3:6] * self.dt * self.orientation_scale * 1000
             self.apply_torque[:, 1 + 26, :] = self.actions[:, 29:32] * self.dt * self.orientation_scale * 1000   
 
-            self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.apply_forces), gymtorch.unwrap_tensor(self.apply_torque), gymapi.ENV_SPACE)
+            # self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.apply_forces), gymtorch.unwrap_tensor(self.apply_torque), gymapi.ENV_SPACE)
 
         self.prev_targets[:, self.actuated_dof_indices] = self.cur_targets[:, self.actuated_dof_indices]
         self.prev_targets[:, self.actuated_dof_indices + 24] = self.cur_targets[:, self.actuated_dof_indices + 24]
@@ -1385,19 +1385,19 @@ def compute_hand_reward(
     # right_hand_finger_dist = (torch.norm(block_right_handle_pos - right_hand_ff_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - right_hand_mf_pos, p=2, dim=-1)
     #                         + torch.norm(block_right_handle_pos - right_hand_rf_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - right_hand_lf_pos, p=2, dim=-1) 
     #                         + torch.norm(block_right_handle_pos - right_hand_th_pos, p=2, dim=-1))
-    # left_hand_finger_dist = (torch.norm(block_left_handle_pos - left_hand_ff_pos, p=2, dim=-1) + torch.norm(block_left_handle_pos - left_hand_mf_pos, p=2, dim=-1)
-    #                         + torch.norm(block_left_handle_pos - left_hand_rf_pos, p=2, dim=-1) + torch.norm(block_left_handle_pos - left_hand_lf_pos, p=2, dim=-1) 
-    #                         + torch.norm(block_left_handle_pos - left_hand_th_pos, p=2, dim=-1))
+    left_hand_finger_dist = (torch.norm(block_right_handle_pos - left_hand_ff_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - left_hand_mf_pos, p=2, dim=-1)
+                            + torch.norm(block_right_handle_pos - left_hand_rf_pos, p=2, dim=-1) + torch.norm(block_right_handle_pos - left_hand_lf_pos, p=2, dim=-1) 
+                            + torch.norm(block_right_handle_pos - left_hand_th_pos, p=2, dim=-1))
     # Orientation alignment for the cube in hand and goal cube
     # quat_diff = quat_mul(object_rot, quat_conjugate(target_rot))
     # rot_dist = 2.0 * torch.asin(torch.clamp(torch.norm(quat_diff[:, 0:3], p=2, dim=-1), max=1.0))
 
     # right_hand_dist_rew = torch.exp(-2 * right_hand_finger_dist)
-    # left_hand_dist_rew = -torch.exp(-2 * left_hand_finger_dist)
+    left_hand_finger_dist_rew = -torch.exp(-2 * left_hand_finger_dist)
 
     # rot_rew = 1.0/(torch.abs(rot_dist) + rot_eps) * rot_reward_scale
 
-    action_penalty = -0.001*torch.sum(actions ** 2, dim=-1)
+    action_penalty = -0.000*torch.sum(actions ** 2, dim=-1)
 
     # Total reward is: position distance + orientation alignment + action regularization + success bonus + fall penalty
     # reward = torch.exp(-0.05*(up_rew * dist_reward_scale)) + torch.exp(-0.05*(right_hand_dist_rew * dist_reward_scale)) + torch.exp(-0.05*(left_hand_dist_rew * dist_reward_scale))
@@ -1405,7 +1405,7 @@ def compute_hand_reward(
     # up_rew = torch.where(right_hand_finger_dist < 0.6,
     #                 torch.where(left_hand_finger_dist < 0.4,
     object_dist = torch.norm(block_right_handle_pos - block_left_handle_pos, p=2, dim=-1)
-    near_rew = torch.exp(-0.5*object_dist)*10
+    near_rew = torch.exp(-0.2*(object_dist*25))
     
     # rot_dist = calculate_angle_between_z_axes(block_right_handle_rot)
     # rot_rew = 1.0/(torch.abs(rot_dist) + 0.03) * 0.2
@@ -1424,19 +1424,21 @@ def compute_hand_reward(
         left_right_height_rew
     )
     
-    reward = right_dist_rew + left_dist_rew + near_rew + rot_rew + left_right_height_rew + action_penalty
+    # reward = right_dist_rew + left_dist_rew + near_rew + rot_rew + left_right_height_rew + action_penalty + left_hand_finger_dist_rew
+    reward = near_rew
     fall_flag1 = (block_left_handle_pos[:, 2] <= 0.2)
     fall_flag2 = (block_right_handle_pos[:, 2] <= 0.2)
     
     # resets = torch.where(right_hand_dist_rew <= 0, torch.ones_like(reset_buf), reset_buf)
     # resets = torch.where(right_hand_finger_dist >= 1.5, torch.ones_like(resets), resets)
     # resets = torch.where(left_hand_finger_dist >= 1.5, torch.ones_like(resets), resets)
-    goal_resets = torch.where(object_dist < 0.1, torch.ones_like(reset_goal_buf), reset_goal_buf)
+    goal_resets = torch.where(object_dist < 0.2, torch.ones_like(reset_goal_buf), reset_goal_buf)
     # Find out which envs hit the goal and update successes count
     successes = torch.where(successes == 0, 
-                    torch.where(object_dist < 0.05, torch.ones_like(successes), successes), successes)
+                    torch.where(object_dist < 0.2, torch.ones_like(successes), successes), successes)
     
-    reward = reward - fall_flag1.float() * 3 - fall_flag2.float() * 20 + successes * 500
+    reward = torch.where(goal_resets == 1, reward + 250, reward)
+    # reward = reward - fall_flag1.float() * 3 - fall_flag2.float() * 20 + successes * 500
 
     resets = torch.where(fall_flag1 | fall_flag2, torch.ones_like(reset_buf), reset_buf)
     resets = torch.where((progress_buf >= max_episode_length), torch.ones_like(resets), resets)
